@@ -1,8 +1,9 @@
+#!/usr/bin/env python
 import socket, os, threading
 import netifaces as ni
 
 def Main():
-    host_server = ni.ifaddresses('wlan0')[ni.AF_INET][0]['addr'] #TODO wlan0
+    host_server = ni.ifaddresses('wlan0')[ni.AF_INET][0]['addr']
     host_client = ""
     port = 5000
     ue = "[-] Unknown error"
