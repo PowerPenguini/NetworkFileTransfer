@@ -1,11 +1,13 @@
 #!/usr/bin/env python
-import socket, os, threading
+import socket
+import os
+import threading
 import netifaces as ni
 
-def Main():
-    host_server = ni.ifaddresses('wlan0')[ni.AF_INET][0]['addr']
-    host_client = ""
-    port = 5000
+host_server = ni.ifaddresses('wlp1s0b1')[ni.AF_INET][0]['addr']
+
+
+def main(host_server, port=5000):
     ue = "[-] Unknown error"
     se = "[-] Server is not running"
     try:
@@ -14,26 +16,29 @@ def Main():
         print ue
     if opt in ("S", "s"):
         try:
-            s = server(host_server, port)
-            s.main()
+            s = Server(host_server, port)
+            s.run()
         except:
             print ue
     elif opt in ("R", "r"):
         try:
             host_client = raw_input("Server IP (e.g. 0.0.0.0) -> ")
-            c = client(host_client, port)
-            c.main()
+            c = Client(host_client, port)
+            c.run()
         except:
             print se
 
-class client(object):
-    def __init__(self, host, port):
+
+class Client(object):
+    def __init__(self, host, port, block_size=1024):
         self.host = host
         self.port = port
-    def main(self):
+        self.block_size = block_size
+
+    def run(self):
         s = socket.socket()
         s.connect((self.host, self.port))
-        print "----------------------------------------------------\n" + s.recv(1024) +" | '!/q' for quit" 
+        print "----------------------------------------------------\n" + s.recv(self.block_size) + " | '!/q' for quit"
         while True:
             print "----------------------------------------------------"
             filename = raw_input("File name? -> ")
@@ -41,17 +46,17 @@ class client(object):
                 break
             packet_counter = 1
             s.send(filename)
-            data = s.recv(1024)
+            data = s.recv(self.block_size)
             if data[:1] == '1':
                 filesize = long(data[1:])
                 print "[+] File exists | " + str(filesize) + "Bytes | Downloading"
                 s.send("1")
                 f = open("downloaded_" + filename, "wb")
-                data = s.recv(1024)
+                data = s.recv(self.block_size)
                 t_recv = len(data)
                 f.write(data)
                 while t_recv < filesize:
-                    data = s.recv(1024)
+                    data = s.recv(self.block_size)
                     t_recv += len(data)
                     f.write(data)
                     packet_counter += 1
@@ -61,25 +66,27 @@ class client(object):
                 print "[-]File does not exist!"
         s.close()
 
-class server(object):
-    def __init__(self, host, port):
+
+class Server(object):
+    def __init__(self, host, port, block_size=1024):
         self.host = host
         self.port = port
+        self.block_size = block_size
 
     def retr(self, name, soc):
         soc.send(" | ".join(os.listdir(".")))
         try:
             while True:
-                filename = soc.recv(1024)
+                filename = soc.recv(self.block_size)
                 if os.path.isfile(filename):
                     soc.send("1" + str(os.path.getsize(filename)))
-                    user_response = soc.recv(1024)
+                    user_response = soc.recv(self.block_size)
                     if user_response == "1":
                         with open(filename, 'rb') as f:
-                            bytes_to_send = f.read(1024)
+                            bytes_to_send = f.read(self.block_size)
                             soc.send(bytes_to_send)
                             while bytes_to_send != "":
-                                bytes_to_send = f.read(1024)
+                                bytes_to_send = f.read(self.block_size)
                                 soc.send(bytes_to_send)
                         print "[+] File {} sent".format(filename)
                 else:
@@ -88,9 +95,9 @@ class server(object):
             print "[-] Connection lost"
         soc.close()
 
-    def main(self):
+    def run(self):
         s = socket.socket()
-        s.bind((self.host,self.port))
+        s.bind((self.host, self.port))
         s.listen(5)
         print "Server Started! | IP: {}\n--------------------------------------------------------".format(self.host)
         while True:
@@ -100,5 +107,6 @@ class server(object):
             t.start()
         s.close()
 
+
 if __name__ == '__main__':
-    Main()
+    main(host_server)
