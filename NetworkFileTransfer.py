@@ -4,7 +4,7 @@ import os
 import threading
 import netifaces as ni
 
-host_server = ni.ifaddresses('wlp1s0b1')[ni.AF_INET][0]['addr']
+host_server = ni.ifaddresses('wlan0')[ni.AF_INET][0]['addr']
 
 
 def main(host_server, port=5000):
